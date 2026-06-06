@@ -41,9 +41,9 @@ TinySwitch is built to be simple and accessible for developers and non-developer
 
 ## 🚀 The Origin Story
 
-TinySwitch is a showcase of agentic code execution. **This application was conceptualized and "vibe coded" entirely by an "ideas person" through AI orchestration, without manually writing a single line of Swift, Shell, or JSON code.** 
+TinySwitch is a prime demonstration of advanced agentic development and human-AI collaboration. The application's architecture, feature roadmap, and user experience were directed entirely by a human Product Architect who defined the operational constraints, engineered the functional requirements, and executed rigorous end-to-end quality assurance (QA) and system testing.
 
-Every single aspect of the app—from compiling dynamic vector-rendered status graphics, handling POSIX process group signals to safely control native Python executables, to implementing fault-tolerant JSON mutations for VS Code—was fully planned, written, and deployed by the AI agent.
+While the underlying execution blocks—encompassing native Swift UI patterns, POSIX process management routines, and structural JSON transformations—were synthesized entirely via AI orchestration, the application's real-world resilience is the direct product of continuous human-in-the-loop performance validation, exploratory edge-case testing, and aggressive iterative refinement.
 
 ---
 
