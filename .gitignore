@@ -1,0 +1,38 @@
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon\r
+._*
+
+# Compiled Binaries & Build Output
+build/
+*.app/
+TinySwitch
+*.o
+*.out
+
+# Model Files
+*.gguf
+*.bin
+Models/
+models/
+
+# Python Caches & Environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
