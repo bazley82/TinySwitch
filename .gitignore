@@ -11,6 +11,7 @@ build/
 TinySwitch
 *.o
 *.out
+*.zip
 
 # Model Files
 *.gguf
