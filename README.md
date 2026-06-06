@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <b>A native macOS menu bar control panel for local Tinygrad LLM servers.</b>
+  <b>A native macOS menu bar app for managing local Tinygrad LLM servers on eGPUs.</b>
 </p>
 
 <p align="center">
@@ -18,118 +18,93 @@
 
 ---
 
-## 🎬 How to Use
+## 🎬 How to Use (User Guide)
 
-Using TinySwitch is designed to be lightweight, visual, and seamless:
+TinySwitch is built to be simple and accessible for developers and non-developers alike:
 
-1.  **Left-Click (Normal Click)** the status bar toggle switch in your macOS menu bar to turn the server on or off.
-    *   Clicking **ON** launches the server and transitions the status to **Connecting (Yellow)**.
-    *   Clicking **OFF** terminates the server process group instantly and transitions the status to **Offline (Red)**.
-2.  **Right-Click (or Control-Click)** the toggle switch to open the dropdown menu:
-    *   Select **Settings...** to open the Preferences window.
-    *   Select **View Server Logs...** to instantly open `~/Library/Logs/TinySwitch.log` in Console or text editor.
-    *   Select **Quit** to terminate the app and server cleanly.
-3.  **In the Preferences window:**
-    *   **Tinygrad Path:** Choose your local Tinygrad installation directory.
-    *   **Models Folder:** Select the folder where your GGUF models are stored. TinySwitch scans this directory dynamically to populate the **Active Model** list.
-    *   **Device Flags:** Configure the runtime environment (e.g. `DEV=METAL` for native Apple Metal, `DEV=NV` for NVIDIA).
-    *   **Max Context Length:** Select your context ceiling limit. When switching models, it automatically defaults to `8192` for 35B models, or `4096` for smaller models.
-    *   **Save Settings:** Persists settings via `UserDefaults` and automatically syncs the details to VS Code's Copilot config.
+1.  **Toggle the Server:** 
+    *   **Left-Click (Normal Click)** the toggle switch icon in your macOS status menu bar to turn the server on or off.
+    *   Once clicked **ON**, the icon changes to **Connecting (Yellow)** while the model weights load into the eGPU's VRAM.
+    *   When the server is fully ready to accept local requests, the icon turns **Online (Green)**.
+    *   Click the icon again at any time to instantly kill the server and free up your system resources (**Offline (Red)**).
+2.  **Access Settings:**
+    *   **Right-Click (or Control-Click)** the menu bar toggle switch to open the dropdown menu.
+    *   Click **Settings...** to open the preferences window.
+3.  **Configure Preferences:**
+    *   **Tinygrad Path:** Enter or browse to your local Tinygrad installation directory.
+    *   **Models Folder:** Click the **Browse...** button to select the directory where your `.gguf` model files are stored. The **Active Model** dropdown will dynamically scan and populate with all available model files.
+    *   **Device Flags:** Choose between native Apple Metal execution (`DEV=METAL`) or Docker-routed NVIDIA eGPU runtime (`DEV=NV`).
+    *   **Max Context Length:** Select your desired token context ceiling. Setting this will automatically keep your VS Code Copilot/Chat settings file in sync.
+    *   Click **Save Settings** to persist your configurations.
 
 ---
 
 ## 🚀 The Origin Story
 
-TinySwitch is a showcase of agentic development: **this entire application was conceptualized, structured, visual-designed, and "vibe coded" entirely by an AI agent (Antigravity)**. 
+TinySwitch is a showcase of agentic code execution. **This application was conceptualized and "vibe coded" entirely by an "ideas person" through AI orchestration, without manually writing a single line of Swift, Shell, or JSON code.** 
 
-No human code was written. The agent programmatically:
-- Designed the AppKit menu bar interaction model.
-- Wrote CoreGraphics vector drawing routines to compile custom status toggles.
-- Handled low-level POSIX process group signals to safely wrap local Python executables.
-- Implemented robust JSON parsing and atomic file writing to automatically configure VS Code.
-
-This project stands as a proof-of-concept demonstrating how complex, native, utility-grade desktop software can be created entirely via high-level goal-based agent orchestration.
+Every single aspect of the app—from compiling dynamic vector-rendered status graphics, handling POSIX process group signals to safely control native Python executables, to implementing fault-tolerant JSON mutations for VS Code—was fully planned, written, and deployed by the AI agent.
 
 ---
 
 ## 🌟 Core Features
 
 ### 1. 3-State Status Indicator (Red / Yellow / Green)
-Instead of a simple binary toggle, TinySwitch implements a 3-state machine to accurately reflect server readiness:
-*   🔴 **OFF (Red Switch):** The server process is completely dead, and no resources are consumed.
-*   🟡 **CONNECTING/LOADING (Yellow Switch):** The background zsh process has launched. Tinygrad is scanning the folder, loading model weights, and compiling kernels/shaders into VRAM. The server is not yet accepting HTTP connections.
-*   🟢 **CONNECTED (Green Switch):** The local server has bound to its designated port and responds successfully to health checks. It is fully ready to answer `/v1/chat/completions` API requests.
+TinySwitch uses a 3-state machine to let you know exactly what your local server is doing:
+*   🔴 **OFF (Red Switch):** The background process is dead, and no hardware resources are being used.
+*   🟡 **CONNECTING/LOADING (Yellow Switch):** The background task is active, and the model weights are loading into eGPU VRAM. The server is not yet ready for requests.
+*   🟢 **CONNECTED (Green Switch):** The local server is fully active and accepting `/v1/chat/completions` API queries.
 
-### 2. Automatic VS Code Token & Model Synchronization
-TinySwitch bridges the gap between your macOS settings and your VS Code Copilot/Chat configuration:
-*   **Model Context Mapping:** Automatically maps your active model to hardware-safe context ceiling limits:
-    *   *Heavy 35B Models* (e.g., Qwen 35B) ➔ default to **8192** tokens.
+### 2. Automatic VS Code Configuration Sync
+TinySwitch automatically keeps your VS Code configuration file (`~/Library/Application Support/Code/User/chatLanguageModels.json`) in sync:
+*   **Model Context Mapping:** Automatically maps your active model to safe hardware context ceiling limits:
+    *   *Heavy 35B Models* ➔ default to **8192** tokens.
     *   *Faster Smaller Models* ➔ default to **4096** tokens.
-*   **Target Configuration:** Directly parses and mutates the VS Code configuration file at:
-    `~/Library/Application Support/Code/User/chatLanguageModels.json`
-*   **Atomic Mutations:** Whenever you change the active model or manually override the context window in settings, TinySwitch updates `maxInputTokens`, `maxOutputTokens`, `maxTokens`, and `contextWindow` keys for the `TinySwitch` provider block. It also hardcodes the URL to `http://localhost:8000/v1/chat/completions` to ensure VS Code remains stable, even if the native server runs on a custom debug port.
-*   **Fault-Tolerant Creation:** If the VS Code configuration file does not exist, TinySwitch will automatically create it with a structured default provider block.
+*   **Target Configuration:** Safely parses your VS Code JSON file, updates token values (`maxInputTokens`, `maxOutputTokens`, `maxTokens`, `contextWindow`), and ensures the URL is strictly outputted as `http://localhost:8000/v1/chat/completions` for stability.
+*   **Atomic Mutations:** Prevents file corruption by writing changes atomically and with pretty-printed indentation.
 
-### 3. Graceful Background Process Group Control
-To prevent ghost processes from leaking VRAM or pinning CPU threads:
-*   Launches the server in a login shell context via `/bin/zsh -c` to inherit standard paths (like CUDA/`nvcc` paths, homebrew, and local bins).
-*   Appends `exec` to the Python command, replacing the zsh shell process image with the native Python execution thread.
-*   On shutdown, retrieves the background process group identifier (`PID`) and performs POSIX-level process group signaling (`kill(-pid, SIGTERM)` followed by `SIGKILL` if unresponsive) to guarantee all spawned sub-processes are terminated cleanly.
+### 3. Graceful Background Process Control
+*   Spawns background processes using a login shell (`/bin/zsh -c`) to naturally inherit your local environment path setup (including standard paths like Homebrew, CUDA/`nvcc`, and local bins).
+*   Uses process group signaling (`kill(-pid, SIGTERM)`) to ensure that all spawned sub-processes are terminated cleanly without leaving orphaned processes behind.
 
 ---
 
-## 🛠️ Installation & Compilation
+## ⚠️ Troubleshooting & Known Issues
+
+During the development of TinySwitch, we encountered and resolved several real-world hardware and framework hurdles:
+
+### 1. The Thunderbolt VRAM Bottleneck
+*   **The Issue:** Running models that exceed the physical VRAM size of your GPU causes the GPU driver to swap memory pages back and forth over the Thunderbolt cable. Due to the limited bandwidth of Thunderbolt 3/4 compared to PCIe slots, generation speed drops drastically to ~5 tokens/s.
+*   **The Solution:** Monitor your model size. Choose weights that fit comfortably within your graphics card's physical memory footprint (e.g. use quantized models) to ensure generation remains local, fast, and high-performance.
+
+### 2. Hardware Lock Collisions
+*   **The Issue:** When a model execution fails or exits abruptly, tinygrad or the GPU interface driver can sometimes leave a zombie `nv_usb4.lock` file behind. This locks up consecutive processes, preventing the server from starting up or accessing the eGPU.
+*   **The Solution:** Terminate any remaining zombie processes and delete the lock file. Run these commands in your macOS Terminal:
+    ```bash
+    pkill -9 -f tinygrad
+    rm -f /tmp/nv_usb4.lock
+    ```
+
+### 3. Token Size Mismatches
+*   **The Issue:** Sending a prompt context payload that exceeds a model's native context limit (e.g., trying to send 8192 tokens to a 4096-limit model) causes an internal array reshape crash in Tinygrad, killing the server.
+*   **The Solution:** TinySwitch automatically updates the token ceilings in your VS Code `chatLanguageModels.json` whenever you select a model or context length. This prevents VS Code from sending payloads that are too large, keeping your server running smoothly.
+
+---
+
+## 🛠️ Build & Installation
 
 Ensure you have Xcode Command Line Tools installed.
 
-1.  Clone the repository or open the project folder:
-    ```bash
-    cd TinySwitch
-    ```
-
-2.  Run the build script:
+1.  Compile and deploy:
     ```bash
     chmod +x build.sh
     ./build.sh
     ```
-    This script will:
-    *   Compile the Swift sources (`Sources/*.swift`).
-    *   Compile the status icons using standard drawing context routines.
-    *   Package everything into a self-contained macOS `TinySwitch.app` bundle.
-    *   Deploy it directly to your `~/Applications/` directory.
-
-3.  Apply ad-hoc code signing to avoid Gatekeeper constraints:
+2.  Apply ad-hoc code signing to avoid Gatekeeper blocks:
     ```bash
     codesign --force --deep --sign - ~/Applications/TinySwitch.app
     ```
-
-4.  Launch the app:
+3.  Launch:
     ```bash
     open ~/Applications/TinySwitch.app
     ```
-
----
-
-## 📂 Codebase Architecture
-
-```
-TinySwitch/
-├── Sources/
-│   ├── main.swift              # App boots and triggers NSApplicationMain loop
-│   ├── AppDelegate.swift       # Status bar interface, health check polling loop, process group manager
-│   ├── SettingsManager.swift   # UserDefaults configuration storage and VS Code JSON sync routine
-│   └── SettingsWindow.swift    # AppKit preferences window, dynamic model scanner & context mapping
-├── Info.plist                  # Configures app to run as an LSUIElement agent (hidden from Dock)
-├── build.sh                    # Automation compilation, packaging, and local deployment script
-└── generate_icon.swift         # Dynamic status and application icon vector drawing engine
-```
-
----
-
-## 🔍 Verification & Logs
-
-*   **Server Log Location:** TinySwitch redirects all stdout and stderr streams to:
-    `~/Library/Logs/TinySwitch.log`
-*   **Menu Log Access:** Click the status icon and select **View Server Logs...** to open the log file instantly in Console or your default text editor.
-*   **VS Code Sync Verification:** Whenever a model or context length changes, verify the changes inside:
-    `/Users/barriesanders/Library/Application Support/Code/User/chatLanguageModels.json`
