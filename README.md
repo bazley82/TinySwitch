@@ -89,6 +89,10 @@ During the development of TinySwitch, we encountered and resolved several real-w
 *   **The Issue:** Sending a prompt context payload that exceeds a model's native context limit (e.g., trying to send 8192 tokens to a 4096-limit model) causes an internal array reshape crash in Tinygrad, killing the server.
 *   **The Solution:** TinySwitch automatically updates the token ceilings in your VS Code `chatLanguageModels.json` whenever you select a model or context length. This prevents VS Code from sending payloads that are too large, keeping your server running smoothly.
 
+### 4. eGPU Power Spikes & Prompt Prefill Throttling
+*   **The Issue:** Large initial prompt payloads (such as the 1,500+ token hidden system prompts sent by VS Code Copilot) cause instantaneous compute spikes that trip the eGPU/Thunderbolt power delivery limits, leading to a `RuntimeError: Device fault detected` hardware disconnection.
+*   **The Solution:** We implemented **Prefill Throttling & Chunking** in the tinygrad LLM generation layer: if the prefill context exceeds 256 tokens, it is split into chunks of 512 tokens with explicit hardware synchronization (`Device.default.synchronize()`) and a 20ms sleep between chunks to smooth out the power draw. Additionally, the server wraps generation in a try-except to catch device faults and automatically restart the API server process cleanly, preventing zombie Python threads.
+
 ---
 
 ## 🛠️ Build & Installation
