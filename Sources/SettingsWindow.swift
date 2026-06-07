@@ -8,6 +8,7 @@ class SettingsWindow: NSWindow {
     private var deviceFlagsDropdown: NSPopUpButton!
     private var portField: NSTextField!
     private var maxContextDropdown: NSPopUpButton!
+    private var syncBtn: NSButton!
     
     init() {
         let styleMask: NSWindow.StyleMask = [.titled, .closable]
@@ -127,6 +128,9 @@ class SettingsWindow: NSWindow {
         cancelBtn.bezelStyle = .rounded
         cancelBtn.keyEquivalent = "\u{1b}" // Escape key
         
+        syncBtn = NSButton(title: "Apply & Sync", target: self, action: #selector(applyAndSyncClicked))
+        syncBtn.bezelStyle = .rounded
+        
         let saveBtn = NSButton(title: "Save Settings", target: self, action: #selector(saveClicked))
         saveBtn.bezelStyle = .rounded
         saveBtn.keyEquivalent = "\r" // Enter key
@@ -136,6 +140,7 @@ class SettingsWindow: NSWindow {
         spacer.translatesAutoresizingMaskIntoConstraints = false
         actionsStack.addArrangedSubview(spacer) // Push buttons to the right
         actionsStack.addArrangedSubview(cancelBtn)
+        actionsStack.addArrangedSubview(syncBtn)
         actionsStack.addArrangedSubview(saveBtn)
         
         container.addArrangedSubview(actionsStack)
@@ -328,5 +333,50 @@ class SettingsWindow: NSWindow {
         
         // Immediately sync to VS Code
         SettingsManager.shared.syncToVSCode(maxTokens: tokens)
+    }
+    
+    @objc private func applyAndSyncClicked() {
+        let manager = SettingsManager.shared
+        manager.tinygradPath = tinygradPathField.stringValue
+        manager.modelsDirectory = modelsDirField.stringValue
+        
+        if modelDropdown.isEnabled, let selectedTitle = modelDropdown.titleOfSelectedItem {
+            if selectedTitle != "(No .gguf models found)" {
+                manager.selectedModelFilename = selectedTitle
+            } else {
+                manager.selectedModelFilename = ""
+            }
+        } else {
+            manager.selectedModelFilename = ""
+        }
+        
+        let selectedFlagsTitle = deviceFlagsDropdown.titleOfSelectedItem
+        if selectedFlagsTitle == "Apple Metal Native (DEV=METAL)" {
+            manager.deviceFlags = "DEV=METAL"
+        } else {
+            manager.deviceFlags = "DEV=NV"
+        }
+        
+        manager.port = portField.stringValue
+        
+        var tokens = 8192
+        if let selectedContext = maxContextDropdown.titleOfSelectedItem {
+            manager.maxContext = selectedContext
+            tokens = Int(selectedContext) ?? 8192
+        }
+        
+        // Trigger sync
+        manager.syncToVSCode(maxTokens: tokens)
+        
+        // Show visual confirmation on the button
+        self.syncBtn.title = "Synced! ✓"
+        self.syncBtn.isEnabled = false
+        
+        Timer.scheduledTimer(withTimeInterval: 2.0, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.syncBtn.title = "Apply & Sync"
+                self?.syncBtn.isEnabled = true
+            }
+        }
     }
 }
