@@ -43,5 +43,9 @@ killall TinySwitch 2>/dev/null || true
 rm -rf ~/Applications/TinySwitch.app
 cp -R build/TinySwitch.app ~/Applications/
 
+# Codesign with entitlements to disable App Sandbox
+echo "Applying codesign with disabled App Sandbox entitlements..."
+codesign --force --deep --sign - --entitlements TinySwitch.entitlements ~/Applications/TinySwitch.app
+
 echo "=== Build and Deployment Complete! ==="
 echo "TinySwitch.app is now located in ~/Applications/"

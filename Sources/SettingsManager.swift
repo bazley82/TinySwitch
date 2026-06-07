@@ -58,8 +58,7 @@ class SettingsManager {
     
     private func performSyncToVSCode(maxTokens: Int) {
         let fileManager = FileManager.default
-        let expandedPath = expandPath("~/Library/Application Support/Code/User/chatLanguageModels.json")
-        let configURL = URL(fileURLWithPath: expandedPath)
+        let configURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Code/User/chatLanguageModels.json")
         let vsCodeUserDir = configURL.deletingLastPathComponent()
         
         // Read existing config or start with empty array
@@ -99,34 +98,16 @@ class SettingsManager {
             "url": "http://localhost:8000/v1/chat/completions",
             "maxInputTokens": maxTokens,
             "maxOutputTokens": maxTokens,
+            "maxTokens": maxTokens,
+            "contextWindow": maxTokens,
             "toolCalling": true,
             "vision": false
         ]
         
         if let idx = tinySwitchIndex {
             var provider = rootArray[idx]
-            var models = provider["models"] as? [[String: Any]] ?? []
-            
-            if models.isEmpty {
-                models.append(newModelEntry)
-            } else {
-                // Update existing models with new token limits, url, and details
-                for i in 0..<models.count {
-                    models[i]["maxInputTokens"] = maxTokens
-                    models[i]["maxOutputTokens"] = maxTokens
-                    models[i]["maxTokens"] = maxTokens
-                    models[i]["contextWindow"] = maxTokens
-                    models[i]["url"] = "http://localhost:8000/v1/chat/completions"
-                    
-                    // If the model entry ID matches placeholder or is empty/generic, update to the selected model details
-                    if let currentId = models[i]["id"] as? String,
-                       currentId == "EXACT_ID_OF_YOUR_SMALL_MODEL" || currentId == "tinyswitch-model" || currentId.isEmpty {
-                        models[i]["id"] = modelId
-                        models[i]["name"] = modelDisplayName
-                    }
-                }
-            }
-            provider["models"] = models
+            // Completely overwrite/update the models list to reflect the active model settings
+            provider["models"] = [newModelEntry]
             rootArray[idx] = provider
         } else {
             let newProvider: [String: Any] = [
@@ -138,16 +119,25 @@ class SettingsManager {
             rootArray.append(newProvider)
         }
         
-        // Write atomically
+        // Write configurations to completely overwrite the existing file contents
         do {
             // Ensure parent directory exists (though it usually does)
             try fileManager.createDirectory(at: vsCodeUserDir, withIntermediateDirectories: true, attributes: nil)
             
             let data = try JSONSerialization.data(withJSONObject: rootArray, options: [.prettyPrinted, .sortedKeys])
-            try data.write(to: configURL, options: .atomic)
+            
+            // Try writing atomically first, fallback to direct write if needed
+            do {
+                try data.write(to: configURL, options: .atomic)
+            } catch {
+                print("Atomic write failed, attempting direct write to overwrite: \(error)")
+                try data.write(to: configURL)
+            }
+            
             print("Successfully synced settings to VS Code at \(configURL.path)")
         } catch {
-            print("Failed to write VS Code config: \(error)")
+            print("CRITICAL ERROR: Failed to write VS Code config: \(error)")
+            fputs("CRITICAL ERROR: Failed to write VS Code config: \(error.localizedDescription)\n", stderr)
         }
     }
 }
