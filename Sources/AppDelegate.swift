@@ -24,6 +24,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
+        SettingsManager.shared.autoInjectVSCodeConfig()
     }
     
     func applicationWillTerminate(_ notification: Notification) {

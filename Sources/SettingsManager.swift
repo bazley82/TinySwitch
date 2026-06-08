@@ -38,7 +38,7 @@ class SettingsManager {
     }
     
     var maxContext: String {
-        get { UserDefaults.standard.string(forKey: keyMaxContext) ?? "8192" }
+        get { UserDefaults.standard.string(forKey: keyMaxContext) ?? "32768" }
         set { UserDefaults.standard.set(newValue, forKey: keyMaxContext) }
     }
     
@@ -92,15 +92,17 @@ class SettingsManager {
         let modelDisplayName = modelFile.isEmpty ? "TinySwitch Model" : (modelFile as NSString).deletingPathExtension
         let modelId = modelFile.isEmpty ? "tinyswitch-model" : modelFile
         
+        let inputTokens = Int(Double(maxTokens) * 0.75)
+        let outputTokens = Int(Double(maxTokens) * 0.25)
+        
         let newModelEntry: [String: Any] = [
-            "id": modelId,
-            "name": modelDisplayName,
-            "url": "http://localhost:8000/v1/chat/completions",
-            "maxInputTokens": maxTokens,
-            "maxOutputTokens": maxTokens,
-            "maxTokens": maxTokens,
             "contextWindow": maxTokens,
+            "id": modelId,
+            "maxInputTokens": inputTokens,
+            "maxOutputTokens": outputTokens,
+            "name": modelDisplayName.localizedCaseInsensitiveContains("qwen") ? "Qwen 2.5 Coder 7B (eGPU)" : modelDisplayName,
             "toolCalling": true,
+            "url": "http://localhost:8000/v1/chat/completions",
             "vision": false
         ]
         
@@ -138,6 +140,103 @@ class SettingsManager {
         } catch {
             print("CRITICAL ERROR: Failed to write VS Code config: \(error)")
             fputs("CRITICAL ERROR: Failed to write VS Code config: \(error.localizedDescription)\n", stderr)
+        }
+    }
+    
+    /// Automatically generates or injects the required chatLanguageModels.json configuration for Copilot on application start.
+    func autoInjectVSCodeConfig() {
+        DispatchQueue.global(qos: .background).async {
+            let fileManager = FileManager.default
+            let configURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Code/User/chatLanguageModels.json")
+            let vsCodeUserDir = configURL.deletingLastPathComponent()
+            
+            var rootArray: [[String: Any]] = []
+            if fileManager.fileExists(atPath: configURL.path) {
+                do {
+                    let data = try Data(contentsOf: configURL)
+                    if let parsed = try JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] {
+                        rootArray = parsed
+                    }
+                } catch {
+                    print("Error reading or parsing existing chatLanguageModels.json: \(error)")
+                }
+            }
+            
+            // Find existing Ollama and TinySwitch entries to ensure clean insertion
+            var ollamaIndex: Int? = nil
+            var tinySwitchIndex: Int? = nil
+            for (index, provider) in rootArray.enumerated() {
+                if let name = provider["name"] as? String {
+                    if name.lowercased() == "ollama" {
+                        ollamaIndex = index
+                    } else if name.localizedCaseInsensitiveContains("tinyswitch") {
+                        tinySwitchIndex = index
+                    }
+                }
+                if let vendor = provider["vendor"] as? String {
+                    if vendor.lowercased() == "ollama" {
+                        ollamaIndex = index
+                    } else if vendor.lowercased() == "customendpoint" {
+                        tinySwitchIndex = index
+                    }
+                }
+            }
+            
+            // Ensure Ollama entry matches exactly
+            let ollamaEntry: [String: Any] = [
+                "name": "Ollama",
+                "url": "http://localhost:11434",
+                "vendor": "ollama"
+            ]
+            if let idx = ollamaIndex {
+                rootArray[idx] = ollamaEntry
+            } else {
+                rootArray.insert(ollamaEntry, at: 0)
+                if let tsIdx = tinySwitchIndex {
+                    tinySwitchIndex = tsIdx + 1
+                }
+            }
+            
+            // TinySwitch configuration exactly as specified in the master instruction
+            let tinySwitchModelEntry: [String: Any] = [
+                "contextWindow": 32768,
+                "id": "Qwen2.5 Coder 7B Instruct GGUF",
+                "maxInputTokens": 24576,
+                "maxOutputTokens": 8192,
+                "name": "Qwen 2.5 Coder 7B (eGPU)",
+                "toolCalling": true,
+                "url": "http://localhost:8000/v1/chat/completions",
+                "vision": false
+            ]
+            
+            let tinySwitchProvider: [String: Any] = [
+                "apiType": "chat-completions",
+                "models": [tinySwitchModelEntry],
+                "name": "TinySwitch",
+                "vendor": "customendpoint"
+            ]
+            
+            if let idx = tinySwitchIndex {
+                rootArray[idx] = tinySwitchProvider
+            } else {
+                rootArray.append(tinySwitchProvider)
+            }
+            
+            // Write configurations atomically and with sorted/pretty printing
+            do {
+                try fileManager.createDirectory(at: vsCodeUserDir, withIntermediateDirectories: true, attributes: nil)
+                let data = try JSONSerialization.data(withJSONObject: rootArray, options: [.prettyPrinted, .sortedKeys])
+                
+                do {
+                    try data.write(to: configURL, options: .atomic)
+                } catch {
+                    print("Atomic write failed, attempting direct write to overwrite: \(error)")
+                    try data.write(to: configURL)
+                }
+                print("Successfully auto-injected VS Code config at startup.")
+            } catch {
+                print("CRITICAL ERROR: Failed to auto-inject VS Code config: \(error)")
+            }
         }
     }
 }

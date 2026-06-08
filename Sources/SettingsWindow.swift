@@ -299,19 +299,13 @@ class SettingsWindow: NSWindow {
     }
     
     private func contextLimit(for modelName: String) -> Int {
-        // Internal dictionary mapping model options to context ceilings
-        let mapping: [String: Int] = [
-            "Heavy 35B Model": 8192,
-            "Faster Smaller Model": 4096
-        ]
-        if let limit = mapping[modelName] {
-            return limit
+        if modelName.localizedCaseInsensitiveContains("qwen") {
+            return 32768
         }
-        // Substring checks for scanned model names
         if modelName.localizedCaseInsensitiveContains("35b") {
-            return 8192
+            return 32768
         }
-        return 4096
+        return 32768 // Default to 32K context window for Copilot stability
     }
     
     @objc private func modelSelectionChanged(_ sender: NSPopUpButton) {

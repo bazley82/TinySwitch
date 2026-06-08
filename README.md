@@ -69,6 +69,15 @@ TinySwitch automatically keeps your VS Code configuration file (`~/Library/Appli
 
 ---
 
+## ⚡ Optimizations
+
+### 1. Prefill Chunking & Throttling (eGPU Power Spike Fix)
+To prevent the eGPU from crashing due to sudden power delivery spikes over Thunderbolt (caused by IDEs like VS Code Copilot sending massive 1,500+ token system prompts on the first request), TinySwitch runs an optimized generation pipeline:
+*   **Chunked Prefill:** Automatically splits large prompt ingestions exceeding 256 tokens into chunks of 512 tokens.
+*   **Micro-Throttling:** Introduces explicit hardware synchronization (`Device.default.synchronize()`) and a 20ms micro-sleep between chunks to allow the Thunderbolt power delivery to stabilize between compute bursts.
+
+---
+
 ## ⚠️ Troubleshooting & Known Issues
 
 During the development of TinySwitch, we encountered and resolved several real-world hardware and framework hurdles:
